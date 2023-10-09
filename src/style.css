@@ -1,0 +1,38 @@
+
+.main {
+    margin: 16px;
+}
+
+.settings{
+    margin: 16px;
+}
+
+.setting{
+    margin-bottom:8px;
+    margin-top:8px;
+    border-spacing:8px;
+}
+
+.buttons{
+    border-spacing:16px;
+}
+
+.image_revealer{
+    margin: 16px;
+}
+
+box .error {
+    padding:16px;
+    background-color: @error_color;
+    border: 2px solid darker(@error_color);
+    border-spacing:16px;
+    border-radius:8px;
+    color: white;
+}
+
+button .error {
+    background-color: lighter(@error_color);
+    border: 2px solid darker(@error_color);
+    border-radius:8px;
+    color: white;
+}
