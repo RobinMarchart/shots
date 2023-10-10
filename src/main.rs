@@ -71,6 +71,8 @@ fn build_ui(app: &Application, listener: &Cell<Option<UnixListener>>) {
     let window = ApplicationWindow::builder()
         .application(app)
         .title("Shots")
+        .height_request(550)
+        .width_request(850)
         .build();
     let main_container = Box::builder()
         .css_classes(["main"])
