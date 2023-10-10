@@ -1,4 +1,9 @@
-use std::{cell::RefCell, ffi::OsStr, rc::Rc, str::from_utf8};
+use std::{
+    cell::{Cell, RefCell},
+    ffi::OsStr,
+    rc::Rc,
+    str::from_utf8,
+};
 
 use gtk4::{
     gdk::Texture,
@@ -10,6 +15,8 @@ use gtk4::{
 };
 
 use anyhow::{anyhow, Context, Result};
+
+use crate::ShotType;
 
 async fn snap_full(cursor: bool, wait_seconds: u32) -> Result<Bytes> {
     timeout_future_seconds(wait_seconds).await;
@@ -44,7 +51,41 @@ async fn snap_full(cursor: bool, wait_seconds: u32) -> Result<Bytes> {
     }
 }
 
+pub(crate) async fn handler_inner(
+    image: &Rc<RefCell<Option<Bytes>>>,
+    image_view: &Picture,
+    image_revealer: &Revealer,
+    delay_button: &SpinButton,
+    cursor_check: &CheckButton,
+    error_revealer: &Revealer,
+    error_label: &Label,
+    window: &ApplicationWindow,
+) {
+    match snap_full(cursor_check.is_active(), delay_button.value() as u32)
+        .await
+        .and_then(move |bytes| {
+            let texture = Texture::from_bytes(&bytes).context("loading screenshot image")?;
+            image.replace(Some(bytes));
+            Ok(texture)
+        }) {
+        Ok(texture) => {
+            image_view.set_paintable(Some(&texture));
+            image_view.set_width_request(texture.width());
+            image_view.set_height_request(texture.height());
+            image_revealer.set_reveal_child(true);
+            error_revealer.set_reveal_child(false);
+            window.set_visible(true);
+        }
+        Err(e) => {
+            error_label.set_text(&format!("{:?}", e));
+            error_revealer.set_reveal_child(true);
+            window.set_visible(true);
+        }
+    }
+}
+
 fn handler(
+    last_shot: &Rc<Cell<ShotType>>,
     main_context: &MainContext,
     image: &Rc<RefCell<Option<Bytes>>>,
     image_view: &Picture,
@@ -55,6 +96,7 @@ fn handler(
     error_label: &Label,
     window: &ApplicationWindow,
 ) {
+    last_shot.set(ShotType::Fullscreen);
     window.set_visible(false);
     main_context.spawn_local(clone!(
             @strong image,
@@ -66,30 +108,12 @@ fn handler(
             @strong error_label,
             @weak window
                 => async move{
-        match snap_full(cursor_check.is_active(), delay_button.value() as u32).await.and_then(move |bytes|{
-            let texture = Texture::from_bytes(&bytes).context("loading screenshot image")?;
-            image.replace(Some(bytes));
-            Ok(texture)
-        }){
-            Ok(texture) => {
-                image_view.set_paintable(Some(&texture));
-                image_view.set_width_request(texture.width());
-                image_view.set_height_request(texture.height());
-                image_revealer.set_reveal_child(true);
-                error_revealer.set_reveal_child(false);
-                    window.set_visible(true);
-            }
-            Err(e) => {
-                error_label.set_text(&format!("{:?}",e));
-                error_revealer.set_reveal_child(true);
-                    window.set_visible(true);
-            }
-        }
-
+        handler_inner(&image, &image_view, &image_revealer, &delay_button, &cursor_check, &error_revealer, &error_label, &window).await
         }));
 }
 
-pub fn get_handler(
+pub(crate) fn get_handler(
+    last_shot: &Rc<Cell<ShotType>>,
     main_context: &MainContext,
     image: &Rc<RefCell<Option<Bytes>>>,
     image_view: &Picture,
@@ -101,6 +125,7 @@ pub fn get_handler(
     window: &ApplicationWindow,
 ) -> impl Fn(&Button) {
     clone!(
+            @strong last_shot,
             @strong main_context,
             @strong image,
             @strong image_view,
@@ -110,5 +135,5 @@ pub fn get_handler(
             @strong error_revealer,
             @strong error_label,
             @weak window
-                =>  move |_| handler(&main_context, &image, &image_view, &image_revealer, &delay_button, &cursor_check, &error_revealer, &error_label, &window)  )
+                =>  move |_| handler(&last_shot,&main_context, &image, &image_view, &image_revealer, &delay_button, &cursor_check, &error_revealer, &error_label, &window)  )
 }

@@ -1,4 +1,9 @@
-use std::{cell::RefCell, ffi::OsStr, rc::Rc, str::from_utf8};
+use std::{
+    cell::{Cell, RefCell},
+    ffi::OsStr,
+    rc::Rc,
+    str::from_utf8,
+};
 
 use gtk4::{
     gdk::Texture,
@@ -11,7 +16,7 @@ use gtk4::{
 
 use anyhow::{anyhow, Context, Result};
 
-use crate::KillSubprocessGuard;
+use crate::{KillSubprocessGuard, ShotType};
 
 async fn snap_selection(cursor: bool, wait_seconds: u32) -> Result<Bytes> {
     timeout_future_seconds(wait_seconds).await;
@@ -97,7 +102,7 @@ async fn snap_selection(cursor: bool, wait_seconds: u32) -> Result<Bytes> {
     }
 }
 
-pub async fn handler_inner(
+pub(crate) async fn handler_inner(
     image: &Rc<RefCell<Option<Bytes>>>,
     image_view: &Picture,
     image_revealer: &Revealer,
@@ -131,6 +136,7 @@ pub async fn handler_inner(
 }
 
 fn handler(
+    last_shot: &Rc<Cell<ShotType>>,
     main_context: &MainContext,
     image: &Rc<RefCell<Option<Bytes>>>,
     image_view: &Picture,
@@ -142,8 +148,9 @@ fn handler(
     window: &ApplicationWindow,
 ) {
     window.set_visible(false);
+    last_shot.set(ShotType::Selection);
     main_context.spawn_local(clone!(
-            @strong main_context,
+        @strong main_context,
         @strong image,
         @strong image_view,
         @strong image_revealer,
@@ -157,7 +164,8 @@ fn handler(
 
     }));
 }
-pub fn get_handler(
+pub(crate) fn get_handler(
+    last_shot: &Rc<Cell<ShotType>>,
     main_context: &MainContext,
     image: &Rc<RefCell<Option<Bytes>>>,
     image_view: &Picture,
@@ -169,6 +177,7 @@ pub fn get_handler(
     window: &ApplicationWindow,
 ) -> impl Fn(&Button) {
     clone!(
+            @strong last_shot,
             @strong main_context,
             @strong image,
             @strong image_view,
@@ -179,6 +188,6 @@ pub fn get_handler(
             @strong error_label,
             @weak window
                 => move |_|{
-    handler(&main_context, &image, &image_view, &image_revealer,& delay_button, &cursor_check,& error_revealer,& error_label,& window)
+    handler(&last_shot,&main_context, &image, &image_view, &image_revealer,& delay_button, &cursor_check,& error_revealer,& error_label,& window)
                         })
 }

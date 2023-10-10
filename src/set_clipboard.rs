@@ -7,8 +7,8 @@ use std::{
 use anyhow::{anyhow, Context, Result};
 use gtk4::{
     gdk::{Clipboard, ContentProvider},
-    glib::{Bytes, clone},
-    Label, Revealer, Button,
+    glib::{clone, Bytes},
+    Button, Label, Revealer,
 };
 
 fn set_cliboard(image: &Rc<RefCell<Option<Bytes>>>, clipboard: &Clipboard) -> Result<()> {
@@ -39,7 +39,7 @@ pub fn get_handler(
     clipboard: &Clipboard,
     error_revealer: &Revealer,
     error_label: &Label,
-) -> impl Fn(&Button){
+) -> impl Fn(&Button) {
     clone!(
         @strong image,
         @strong clipboard,

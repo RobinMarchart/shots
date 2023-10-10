@@ -35,6 +35,12 @@ impl KillSubprocessGuard {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ShotType {
+    Fullscreen,
+    Selection,
+}
+
 mod activate;
 mod save_to_file;
 mod set_clipboard;
@@ -140,6 +146,8 @@ fn build_ui(app: &Application, listener: &Cell<Option<UnixListener>>) {
         .build();
 
     let image: Rc<RefCell<Option<Bytes>>> = Rc::new(RefCell::new(None));
+    let last_shot: Rc<Cell<ShotType>> = Rc::new(Cell::new(ShotType::Selection));
+
     let main_context = MainContext::default();
 
     let display = Display::default().expect("could not connect to display");
@@ -148,6 +156,7 @@ fn build_ui(app: &Application, listener: &Cell<Option<UnixListener>>) {
     let shortcuts = ShortcutController::new();
 
     main_context.spawn_local(activate::wait_for_activation(
+        last_shot.clone(),
         window.clone(),
         listener,
         image.clone(),
@@ -163,6 +172,7 @@ fn build_ui(app: &Application, listener: &Cell<Option<UnixListener>>) {
         error_revealer.set_reveal_child(false);
     }));
     capture_full.connect_clicked(snap_full::get_handler(
+        &last_shot,
         &main_context,
         &image,
         &image_view,
@@ -174,6 +184,7 @@ fn build_ui(app: &Application, listener: &Cell<Option<UnixListener>>) {
         &window,
     ));
     capture_selection.connect_clicked(snap_selection::get_handler(
+        &last_shot,
         &main_context,
         &image,
         &image_view,
