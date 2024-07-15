@@ -23,10 +23,10 @@ async fn snap_selection(cursor: bool, wait_seconds: u32) -> Result<Bytes> {
 
     let _hyprpicker = KillSubprocessGuard::new(
         Subprocess::newv(
-            &[OsStr::new("hyprpicker"), OsStr::new("-r"), OsStr::new("-z")],
+            &[OsStr::new("wayfreeze"), OsStr::new("--hide-cursor")],
             SubprocessFlags::NONE,
         )
-        .context("spawning hyprpicker")?,
+        .context("spawning wayfreeze")?,
     );
 
     let slurp = Subprocess::newv(
