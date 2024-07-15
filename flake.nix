@@ -38,7 +38,13 @@
         craneLib = (crane.mkLib pkgs).overrideToolchain (
           p: p.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml
         );
-        src = craneLib.cleanCargoSource ./.;
+        cssFilter = path: _type: builtins.match ".*css$" path != null;
+        cssOrCargo = path: type: (cssFilter path type) || (craneLib.filterCargoSources path type);
+        src = lib.cleanSourceWith {
+          src = ./.;
+          filter = cssOrCargo;
+          name = "shots-src";
+        };
         # Common arguments can be set here to avoid repeating them later
         commonArgs = {
           strictDeps = true;

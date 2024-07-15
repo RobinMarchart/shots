@@ -112,13 +112,14 @@ pub(crate) async fn handler_inner(
     error_label: &Label,
     window: &ApplicationWindow,
 ) {
-    match snap_selection(cursor_check.is_active(), delay_button.value() as u32)
+    let image = snap_selection(cursor_check.is_active(), delay_button.value() as u32)
         .await
         .and_then(move |bytes| {
             let texture = Texture::from_bytes(&bytes).context("loading screenshot image")?;
             image.replace(Some(bytes));
             Ok(texture)
-        }) {
+        });
+    match image {
         Ok(texture) => {
             image_view.set_paintable(Some(&texture));
             image_view.set_width_request(texture.width());
