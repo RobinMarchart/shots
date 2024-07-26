@@ -49,8 +49,8 @@
         commonArgs = {
           strictDeps = true;
           inherit src;
-          nativeBuildInputs = with pkgs; [ pkg-config ];
-          buildInputs = with pkgs; [ gtk4 ];
+          nativeBuildInputs = with pkgs; [ pkg-config wrapGAppsHook ];
+          buildInputs = with pkgs; [ gtk4 gsettings-desktop-schemas glib ];
         };
 
         # Build *just* the cargo dependencies, so we can reuse
