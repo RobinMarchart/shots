@@ -19,10 +19,9 @@ use gtk4::{
 
 use crate::ShotType;
 
-const SOCKET_NAME: &str = "shots";
-
 pub fn activate_or_open() -> Result<UnixListener> {
-    let addr = SocketAddr::from_abstract_name(SOCKET_NAME)?;
+    let addr =
+        SocketAddr::from_abstract_name(format!("shots-{}", std::env::var("XDG_SESSION_ID")?))?;
     match UnixListener::bind_addr(&addr) {
         Ok(listener) => Ok(listener),
         Err(e) => {
