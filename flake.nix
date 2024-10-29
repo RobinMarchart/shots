@@ -17,7 +17,10 @@
       url = "github:numtide/flake-utils";
       inputs.systems.follows = "systems";
     };
-
+    wayfreeze = {
+      url = "github:jappie3/wayfreeze";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -27,11 +30,13 @@
       crane,
       rust-overlay,
       flake-utils,
+      wayfreeze,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
+        wayfreeze_pkg = wayfreeze.packages.${system}.wayfreeze;
         overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs { inherit system overlays; };
         inherit (pkgs) lib;
@@ -49,9 +54,21 @@
         commonArgs = {
           strictDeps = true;
           inherit src;
-          nativeBuildInputs = with pkgs; [ pkg-config wrapGAppsHook ];
-          buildInputs = with pkgs; [ gtk4 gsettings-desktop-schemas glib ];
+          nativeBuildInputs = with pkgs; [
+            pkg-config
+            wrapGAppsHook
+          ];
+          buildInputs = with pkgs; [
+            gtk4
+            gsettings-desktop-schemas
+            glib
+          ];
         };
+        runtimeDeps = [
+          pkgs.slurp
+          pkgs.grim
+          wayfreeze_pkg
+        ];
 
         # Build *just* the cargo dependencies, so we can reuse
         # all of that work (e.g. via cachix) when running in CI
@@ -62,11 +79,7 @@
         shots_unwrapped = craneLib.buildPackage (commonArgs // { inherit cargoArtifacts; });
         shots = pkgs.writeShellApplication {
           name = "shots";
-          runtimeInputs = with pkgs; [
-            wayfreeze
-            slurp
-            grim
-          ];
+          runtimeInputs = runtimeDeps;
           text = "exec \"${shots_unwrapped}/bin/shots\"";
         };
       in
@@ -116,11 +129,7 @@
           checks = self.checks.${system};
 
           # Extra inputs can be added here; cargo and rustc are provided by default.
-          packages = with pkgs; [
-            wayfreeze
-            slurp
-            grim
-          ];
+          packages = runtimeDeps;
         };
       }
     );
